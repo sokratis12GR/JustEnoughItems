@@ -5,6 +5,7 @@ import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -14,15 +15,12 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.EntityRenderer;
-import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
 import net.minecraft.client.renderer.block.model.ItemTransformVec3f;
 import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.renderer.vertex.VertexFormatElement;
@@ -31,10 +29,9 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
 
-import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.model.IPerspectiveAwareModel;
+import net.minecraftforge.client.model.ISmartItemModel;
 import net.minecraftforge.client.model.pipeline.IVertexConsumer;
 import net.minecraftforge.client.model.pipeline.LightUtil;
 import net.minecraftforge.client.model.pipeline.UnpackedBakedQuad;
@@ -48,10 +45,9 @@ import mezz.jei.util.Translator;
 
 @SuppressWarnings("deprecation")
 public class GuiItemStackFast {
-	private static final ResourceLocation RES_ITEM_GLINT = new ResourceLocation("textures/misc/enchanted_item_glint.png");
 	private static final float RADS = (float) (180.0 / Math.PI);
 
-	private final Matrix4f tempMat = new Matrix4f();
+	private static final Matrix4f tempMat = new Matrix4f();
 	private final int xPosition;
 	private final int yPosition;
 	private final int width;
@@ -60,6 +56,7 @@ public class GuiItemStackFast {
 
 	private ItemStack itemStack;
 	private IBakedModel bakedModel;
+	private List<BakedQuad> transformedQuads;
 
 	public GuiItemStackFast(int xPosition, int yPosition, int padding) {
 		this.xPosition = xPosition;
@@ -72,14 +69,88 @@ public class GuiItemStackFast {
 	public void setItemStack(ItemStack itemStack) {
 		this.itemStack = itemStack;
 		this.bakedModel = Minecraft.getMinecraft().getRenderItem().getItemModelMesher().getItemModel(itemStack);
+
+		if (!isSpecialRenderer()) {
+			int x = xPosition + padding + 8;
+			int y = yPosition + padding + 8;
+
+			Matrix4f transformMat = new Matrix4f();
+			transformMat.setIdentity();
+
+			if (bakedModel.isGui3d()) {
+				tempMat.setIdentity();
+				tempMat.setM00(20);
+				tempMat.setM11(20);
+				tempMat.setM22(-20);
+				transformMat.mul(tempMat);
+
+				tempMat.setIdentity();
+				tempMat.setTranslation(new Vector3f(((float) x) / 20f, ((float) y) / 20f, (100.0F + 50f) / -20f));
+				transformMat.mul(tempMat);
+				tempMat.rotX(210f / RADS);
+				transformMat.mul(tempMat);
+				tempMat.rotY(-135f / RADS);
+				transformMat.mul(tempMat);
+			} else {
+				tempMat.setIdentity();
+				tempMat.setM00(32);
+				tempMat.setM11(32);
+				tempMat.setM22(-32);
+				transformMat.mul(tempMat);
+
+				tempMat.setIdentity();
+				tempMat.setTranslation(new Vector3f(((float) x) / 32f, ((float) y) / 32f, (100.0F + 50f) / -32f));
+				transformMat.mul(tempMat);
+				tempMat.rotX(180f / RADS);
+				transformMat.mul(tempMat);
+			}
+
+			handleCameraTransforms(transformMat, bakedModel, ItemCameraTransforms.TransformType.GUI);
+
+			tempMat.setIdentity();
+			tempMat.setScale(0.5f);
+			transformMat.mul(tempMat);
+
+			tempMat.setIdentity();
+			tempMat.setTranslation(new Vector3f(-0.5f, -0.5f, -0.5f));
+			transformMat.mul(tempMat);
+
+			Matrix3f invTransposeMat = new Matrix3f();
+			transformMat.getRotationScale(invTransposeMat);
+			invTransposeMat.invert();
+			invTransposeMat.transpose();
+
+			List<Object> quads = new ArrayList<>();
+
+			for (EnumFacing enumfacing : EnumFacing.VALUES) {
+				List faceQuads = bakedModel.getFaceQuads(enumfacing);
+				if (faceQuads != null) {
+					quads.addAll(faceQuads);
+				}
+			}
+			List generalQuads = bakedModel.getGeneralQuads();
+			if (generalQuads != null) {
+				quads.addAll(generalQuads);
+			}
+
+			this.transformedQuads = new ArrayList<>();
+
+			for (Object quad : quads) {
+				BakedQuad bakedquad = (BakedQuad) quad;
+
+				bakedquad = applyToQuad(transformMat, invTransposeMat, bakedquad);
+
+				this.transformedQuads.add(bakedquad);
+			}
+		}
 	}
 
 	public ItemStack getItemStack() {
 		return itemStack;
 	}
 
-	public boolean isBuiltInRenderer() {
-		return bakedModel != null && bakedModel.isBuiltInRenderer();
+	public boolean isSpecialRenderer() {
+		return bakedModel != null && (bakedModel.isBuiltInRenderer() || bakedModel instanceof ISmartItemModel);
 	}
 
 	public boolean isGui3d() {
@@ -87,76 +158,30 @@ public class GuiItemStackFast {
 	}
 
 	public void clear() {
-		this.itemStack = null;
+		itemStack = null;
 	}
 
 	public boolean isMouseOver(int mouseX, int mouseY) {
 		return (itemStack != null) && (mouseX >= xPosition) && (mouseY >= yPosition) && (mouseX < xPosition + width) && (mouseY < yPosition + height);
 	}
 
-	public void renderItemAndEffectIntoGUI(boolean isGui3d) {
+	public void renderItemAndEffectIntoGUI(boolean renderEffect) {
 		if (itemStack == null) {
 			return;
 		}
 
-		if (Config.editModeEnabled) {
-			renderEditMode();
+		if (!renderEffect) {
+			if (Config.editModeEnabled) {
+				renderEditMode();
+			}
+
+			renderModel(itemStack);
+		} else if (itemStack.hasEffect()) {
+			renderEffect();
 		}
-
-		GlStateManager.pushMatrix();
-
-		int x = xPosition + padding + 8;
-		int y = yPosition + padding + 8;
-
-		Matrix4f transformMat = new Matrix4f();
-		transformMat.setIdentity();
-
-		if (isGui3d) {
-			tempMat.setIdentity();
-			tempMat.setTranslation(new Vector3f(((float) x) / 20f, ((float) y) / 20f, (100.0F + 50f) / -20f));
-			transformMat.mul(tempMat);
-			tempMat.rotX(210f / RADS);
-			transformMat.mul(tempMat);
-			tempMat.rotY(-135f / RADS);
-			transformMat.mul(tempMat);
-		} else {
-			tempMat.setIdentity();
-			tempMat.setTranslation(new Vector3f(((float) x) / 32f, ((float) y) / 32f, (100.0F + 50f) / -32f));
-			transformMat.mul(tempMat);
-			tempMat.rotX(180f / RADS);
-			transformMat.mul(tempMat);
-		}
-
-		handleCameraTransforms(transformMat, this.bakedModel, ItemCameraTransforms.TransformType.GUI);
-
-		tempMat.setIdentity();
-		tempMat.setScale(0.5f);
-		transformMat.mul(tempMat);
-
-		tempMat.setIdentity();
-		tempMat.setTranslation(new Vector3f(-0.5f, -0.5f, -0.5f));
-		transformMat.mul(tempMat);
-
-		Matrix3f invTransposeMat = new Matrix3f();
-		transformMat.getRotationScale(invTransposeMat);
-		invTransposeMat.invert();
-		invTransposeMat.transpose();
-
-//		ForgeHooksClient.multiplyCurrentGlMatrix(transformMat);
-//
-//		transformMat.setIdentity();
-//		invTransposeMat.setIdentity();
-
-		renderModel(transformMat, invTransposeMat, bakedModel, itemStack);
-
-		if (itemStack.hasEffect()) {
-			renderEffect(transformMat, invTransposeMat, bakedModel);
-		}
-
-		GlStateManager.popMatrix();
 	}
 
-	public void handleCameraTransforms(Matrix4f transformMat, IBakedModel model, ItemCameraTransforms.TransformType cameraTransformType) {
+	public static void handleCameraTransforms(Matrix4f transformMat, IBakedModel model, ItemCameraTransforms.TransformType cameraTransformType) {
 		if (model instanceof IPerspectiveAwareModel) {
 			Pair<IBakedModel, Matrix4f> pair = ((IPerspectiveAwareModel) model).handlePerspective(cameraTransformType);
 
@@ -164,46 +189,43 @@ public class GuiItemStackFast {
 				transformMat.mul(pair.getRight());
 			}
 		} else {
-			applyVanillaTransform(transformMat, model.getItemCameraTransforms().gui);
-		}
-	}
+			if (model.getItemCameraTransforms().gui != ItemTransformVec3f.DEFAULT) {
+				tempMat.setIdentity();
+				tempMat.setTranslation(model.getItemCameraTransforms().gui.translation);
+				transformMat.mul(tempMat);
 
-	public void applyVanillaTransform(Matrix4f transformMat, ItemTransformVec3f transform) {
-		if (transform != ItemTransformVec3f.DEFAULT) {
-			tempMat.setIdentity();
-			tempMat.setTranslation(transform.translation);
-			transformMat.mul(tempMat);
+				tempMat.rotY(model.getItemCameraTransforms().gui.rotation.y);
+				transformMat.mul(tempMat);
 
-			tempMat.rotY(transform.rotation.y);
-			transformMat.mul(tempMat);
+				tempMat.rotX(model.getItemCameraTransforms().gui.rotation.x);
+				transformMat.mul(tempMat);
 
-			tempMat.rotX(transform.rotation.x);
-			transformMat.mul(tempMat);
+				tempMat.rotZ(model.getItemCameraTransforms().gui.rotation.z);
+				transformMat.mul(tempMat);
 
-			tempMat.rotZ(transform.rotation.z);
-			transformMat.mul(tempMat);
-
-			tempMat.setIdentity();
-			tempMat.setM00(transform.scale.x);
-			tempMat.setM11(transform.scale.y);
-			tempMat.setM22(transform.scale.z);
-			transformMat.mul(tempMat);
+				tempMat.setIdentity();
+				tempMat.setM00(model.getItemCameraTransforms().gui.scale.x);
+				tempMat.setM11(model.getItemCameraTransforms().gui.scale.y);
+				tempMat.setM22(model.getItemCameraTransforms().gui.scale.z);
+				transformMat.mul(tempMat);
+			}
 		}
 	}
 
 	public static BakedQuad applyToQuad(final Matrix4f transform, final Matrix3f invtranspose, BakedQuad quad) {
 		UnpackedBakedQuad.Builder builder = new UnpackedBakedQuad.Builder(DefaultVertexFormats.ITEM);
-		IVertexConsumer cons = new VertexTransformer(builder)
-		{
-			@Override public void put(int element, float... data)
-			{
+		IVertexConsumer cons = new VertexTransformer(builder) {
+			@Override
+			public void put(int element, float... data) {
 				VertexFormatElement el = DefaultVertexFormats.ITEM.getElement(element);
 
-				switch(el.getUsage())
-				{
+				switch (el.getUsage()) {
 					case POSITION:
 						float[] newData = new float[4];
 						Vector4f vec = new Vector4f(data);
+						if (vec.w == 0) {
+							vec.w = 1;
+						}
 						transform.transform(vec);
 						vec.get(newData);
 						parent.put(element, newData);
@@ -212,6 +234,7 @@ public class GuiItemStackFast {
 						float[] newData2 = new float[4];
 						Vector3f vec2 = new Vector3f(data);
 						invtranspose.transform(vec2);
+						vec2.normalize();
 						vec2.get(newData2);
 						newData2[3] = 0;
 						parent.put(element, newData2);
@@ -226,25 +249,18 @@ public class GuiItemStackFast {
 		return builder.build();
 	}
 
-	private void renderModel(Matrix4f transformMat, Matrix3f invTransposeMat,IBakedModel model, ItemStack stack) {
-		renderModel(transformMat, invTransposeMat, model, -1, stack);
+	private void renderModel(ItemStack stack) {
+		renderModel(-1, stack);
 	}
 
-	private void renderModel(Matrix4f transformMat, Matrix3f invTransposeMat, IBakedModel model, int color, ItemStack stack) {
+	private void renderModel(int color, ItemStack stack) {
 		Tessellator tessellator = Tessellator.getInstance();
 		WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-		worldrenderer.startDrawingQuads();
-		worldrenderer.setVertexFormat(DefaultVertexFormats.ITEM);
 
-		for (EnumFacing enumfacing : EnumFacing.VALUES) {
-			this.renderQuads(transformMat, invTransposeMat, worldrenderer, model.getFaceQuads(enumfacing), color, stack);
-		}
-
-		this.renderQuads(transformMat, invTransposeMat, worldrenderer, model.getGeneralQuads(), color, stack);
-		tessellator.draw();
+		renderQuads(worldrenderer, this.transformedQuads, color, stack);
 	}
 
-	private void renderQuads(Matrix4f transformMat, Matrix3f invTransposeMat, WorldRenderer renderer, List quads, int color, ItemStack stack) {
+	private void renderQuads(WorldRenderer renderer, List quads, int color, ItemStack stack) {
 		boolean flag = color == -1 && stack != null;
 		BakedQuad bakedquad;
 		int j;
@@ -252,8 +268,6 @@ public class GuiItemStackFast {
 		for (Object quad : quads) {
 			bakedquad = (BakedQuad) quad;
 			j = color;
-
-			bakedquad = applyToQuad(transformMat, invTransposeMat, bakedquad);
 
 			if (flag && bakedquad.hasTintIndex()) {
 				j = stack.getItem().getColorFromItemStack(stack, bakedquad.getTintIndex());
@@ -268,40 +282,12 @@ public class GuiItemStackFast {
 		}
 	}
 
-	private void renderEffect(Matrix4f transformMat, Matrix3f invTransposeMat, IBakedModel model) {
-		TextureManager textureManager = Minecraft.getMinecraft().getTextureManager();
-
-		GlStateManager.depthMask(false);
-		GlStateManager.depthFunc(514);
-		GlStateManager.blendFunc(768, 1);
-		textureManager.bindTexture(RES_ITEM_GLINT);
-		GlStateManager.matrixMode(5890);
-
-		GlStateManager.pushMatrix();
-		GlStateManager.scale(8.0F, 8.0F, 8.0F);
-		float f = (float) (Minecraft.getSystemTime() % 3000L) / 3000.0F / 8.0F;
-		GlStateManager.translate(f, 0.0F, 0.0F);
-		GlStateManager.rotate(-50.0F, 0.0F, 0.0F, 1.0F);
-		this.renderModel(transformMat, invTransposeMat, model, -8372020);
-		GlStateManager.popMatrix();
-
-		GlStateManager.pushMatrix();
-		GlStateManager.scale(8.0F, 8.0F, 8.0F);
-		float f1 = (float) (Minecraft.getSystemTime() % 4873L) / 4873.0F / 8.0F;
-		GlStateManager.translate(-f1, 0.0F, 0.0F);
-		GlStateManager.rotate(10.0F, 0.0F, 0.0F, 1.0F);
-		this.renderModel(transformMat, invTransposeMat, model, -8372020);
-		GlStateManager.popMatrix();
-
-		GlStateManager.matrixMode(5888);
-		GlStateManager.blendFunc(770, 771);
-		GlStateManager.depthFunc(515);
-		GlStateManager.depthMask(true);
-		textureManager.bindTexture(TextureMap.locationBlocksTexture);
+	private void renderEffect() {
+		renderModel(-8372020);
 	}
 
-	private void renderModel(Matrix4f transformMat, Matrix3f invTransposeMat, IBakedModel model, int color) {
-		this.renderModel(transformMat, invTransposeMat, model, color, null);
+	private void renderModel(int color) {
+		this.renderModel(color, null);
 	}
 
 	public void renderSlow() {
