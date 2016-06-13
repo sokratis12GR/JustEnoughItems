@@ -14,12 +14,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Table;
 import mezz.jei.Internal;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.api.recipe.IRecipeCategory;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 /**
- * A RecipeMap efficiently links Recipes, IRecipeCategory, and ItemStacks.
+ * A RecipeMap efficiently links Recipes, IRecipeCategory, and Ingredients.
  */
 public class RecipeMap {
 
@@ -35,50 +36,35 @@ public class RecipeMap {
 	}
 
 	@Nonnull
-	public ImmutableList<IRecipeCategory> getRecipeCategories(@Nonnull ItemStack itemStack) {
+	public <T> ImmutableList<IRecipeCategory> getRecipeCategories(@Nonnull T ingredient, @Nonnull IIngredientType<T> ingredientType) {
 		Set<IRecipeCategory> recipeCategories = new HashSet<>();
-		for (String stackKey : Internal.getStackHelper().getUniqueIdentifiersWithWildcard(itemStack)) {
+		Set<String> stackKeys = new HashSet<>();
+		stackKeys.add(ingredientType.getKey(ingredient));
+		stackKeys.add(ingredientType.getWildcardKey(ingredient));
+		for (String stackKey : stackKeys) {
 			recipeCategories.addAll(categoryMap.get(stackKey));
 		}
 		return recipeCategoryOrdering.immutableSortedCopy(recipeCategories);
 	}
 
-	@Nonnull
-	public ImmutableList<IRecipeCategory> getRecipeCategories(@Nonnull FluidStack fluid) {
-		String key = getKeyForFluid(fluid);
-		return recipeCategoryOrdering.immutableSortedCopy(categoryMap.get(key));
-	}
-
-	public void addRecipeCategory(@Nonnull IRecipeCategory recipeCategory, @Nonnull ItemStack itemStack) {
-		String stackKey = Internal.getStackHelper().getUniqueIdentifierForStack(itemStack);
+	public <T> void addRecipeCategory(@Nonnull IRecipeCategory recipeCategory, @Nonnull T ingredient, @Nonnull IIngredientType<T> ingredientType) {
+		String stackKey = ingredientType.getKey(ingredient);
 		List<IRecipeCategory> recipeCategories = categoryMap.get(stackKey);
 		if (!recipeCategories.contains(recipeCategory)) {
 			recipeCategories.add(recipeCategory);
 		}
 	}
 
-	private void addRecipeCategory(@Nonnull IRecipeCategory recipeCategory, @Nonnull FluidStack fluidStack) {
-		String key = getKeyForFluid(fluidStack);
-		List<IRecipeCategory> recipeCategories = categoryMap.get(key);
-		if (!recipeCategories.contains(recipeCategory)) {
-			recipeCategories.add(recipeCategory);
-		}
-	}
-
 	@Nonnull
-	private String getKeyForFluid(FluidStack fluidStack) {
-		if (fluidStack.tag != null) {
-			return "fluid:" + fluidStack.getFluid().getName() + ":" + fluidStack.tag;
-		}
-		return "fluid:" + fluidStack.getFluid().getName();
-	}
-
-	@Nonnull
-	public ImmutableList<Object> getRecipes(@Nonnull IRecipeCategory recipeCategory, @Nonnull ItemStack stack) {
+	public <T> ImmutableList<Object> getRecipes(@Nonnull IRecipeCategory recipeCategory, @Nonnull T ingredient, @Nonnull IIngredientType<T> ingredientType) {
 		Map<String, List<Object>> recipesForType = recipeTable.row(recipeCategory);
 
+		Set<String> stackKeys = new HashSet<>();
+		stackKeys.add(ingredientType.getKey(ingredient));
+		stackKeys.add(ingredientType.getWildcardKey(ingredient));
+
 		ImmutableList.Builder<Object> listBuilder = ImmutableList.builder();
-		for (String name : Internal.getStackHelper().getUniqueIdentifiersWithWildcard(stack)) {
+		for (String name : stackKeys) {
 			List<Object> recipes = recipesForType.get(name);
 			if (recipes != null) {
 				listBuilder.addAll(recipes);
@@ -87,28 +73,15 @@ public class RecipeMap {
 		return listBuilder.build();
 	}
 
-	@Nonnull
-	public List<Object> getRecipes(@Nonnull IRecipeCategory recipeCategory, @Nonnull FluidStack fluidStack) {
+	public <T> void addRecipe(@Nonnull Object recipe, @Nonnull IRecipeCategory recipeCategory, @Nonnull Iterable<T> ingredients, @Nonnull IIngredientType<T> ingredientType) {
 		Map<String, List<Object>> recipesForType = recipeTable.row(recipeCategory);
 
-		String name = getKeyForFluid(fluidStack);
-		List<Object> recipes = recipesForType.get(name);
-		if (recipes == null) {
-			return ImmutableList.of();
-		}
-		return Collections.unmodifiableList(recipes);
-	}
-
-	public void addRecipe(@Nonnull Object recipe, @Nonnull IRecipeCategory recipeCategory, @Nonnull Iterable<ItemStack> itemStacks, @Nonnull Iterable<FluidStack> fluidStacks) {
-		Map<String, List<Object>> recipesForType = recipeTable.row(recipeCategory);
-		StackHelper stackHelper = Internal.getStackHelper();
-
-		for (ItemStack itemStack : itemStacks) {
-			if (itemStack == null) {
+		for (T ingredient : ingredients) {
+			if (ingredient == null) {
 				continue;
 			}
 
-			String stackKey = stackHelper.getUniqueIdentifierForStack(itemStack);
+			String stackKey = ingredientType.getKey(ingredient);
 			List<Object> recipes = recipesForType.get(stackKey);
 			if (recipes == null) {
 				recipes = Lists.newArrayList();
@@ -116,23 +89,7 @@ public class RecipeMap {
 			}
 			recipes.add(recipe);
 
-			addRecipeCategory(recipeCategory, itemStack);
-		}
-
-		for (FluidStack fluidStack : fluidStacks) {
-			if (fluidStack == null || fluidStack.getFluid() == null) {
-				continue;
-			}
-
-			String fluidKey = getKeyForFluid(fluidStack);
-			List<Object> recipes = recipesForType.get(fluidKey);
-			if (recipes == null) {
-				recipes = Lists.newArrayList();
-				recipesForType.put(fluidKey, recipes);
-			}
-			recipes.add(recipe);
-
-			addRecipeCategory(recipeCategory, fluidStack);
+			addRecipeCategory(recipeCategory, ingredient, ingredientType);
 		}
 	}
 }

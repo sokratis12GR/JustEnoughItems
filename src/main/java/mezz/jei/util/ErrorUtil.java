@@ -14,6 +14,7 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.FluidStack;
 
 public class ErrorUtil {
 	@Nonnull
@@ -37,7 +38,7 @@ public class ErrorUtil {
 
 		recipeInfoBuilder.append("\nOutput ItemStacks: ");
 		try {
-			List outputs = recipeWrapper.getOutputs();
+			List outputs = recipeWrapper.getOutputs(ItemStack.class);
 			List<String> itemStackIngredientsInfo = getItemStackIngredientsInfo(outputs);
 			recipeInfoBuilder.append(itemStackIngredientsInfo);
 		} catch (RuntimeException e) {
@@ -46,14 +47,14 @@ public class ErrorUtil {
 
 		recipeInfoBuilder.append("\nOutput Fluids: ");
 		try {
-			recipeInfoBuilder.append(recipeWrapper.getFluidOutputs());
+			recipeInfoBuilder.append(recipeWrapper.getOutputs(FluidStack.class));
 		} catch (RuntimeException e) {
 			recipeInfoBuilder.append(e.getMessage());
 		}
 
 		recipeInfoBuilder.append("\nInput ItemStacks: ");
 		try {
-			List inputs = recipeWrapper.getInputs();
+			List inputs = recipeWrapper.getInputs(ItemStack.class);
 			List<String> itemStackIngredientsInfo = getItemStackIngredientsInfo(inputs);
 			recipeInfoBuilder.append(itemStackIngredientsInfo);
 		} catch (RuntimeException e) {
@@ -62,7 +63,7 @@ public class ErrorUtil {
 
 		recipeInfoBuilder.append("\nInput Fluids: ");
 		try {
-			recipeInfoBuilder.append(recipeWrapper.getFluidInputs());
+			recipeInfoBuilder.append(recipeWrapper.getInputs(FluidStack.class));
 		} catch (RuntimeException e) {
 			recipeInfoBuilder.append(e.getMessage());
 		}

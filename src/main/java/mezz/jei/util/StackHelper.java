@@ -92,7 +92,7 @@ public class StackHelper implements IStackHelper {
 				continue;
 			}
 
-			ItemStack matching = containsStack(availableItemStacks, requiredStacks);
+			ItemStack matching = getMatch(availableItemStacks, requiredStacks);
 			if (matching == null) {
 				matchingItemResult.missingItems.add(key);
 			} else {
@@ -124,13 +124,13 @@ public class StackHelper implements IStackHelper {
 	/** Returns true if all stacks from "contains" are found in "stacks" and the opposite is true as well. */
 	public boolean containsSameStacks(@Nonnull Iterable<ItemStack> stacks, @Nonnull Iterable<ItemStack> contains) {
 		for (ItemStack stack : contains) {
-			if (containsStack(stacks, stack) == null) {
+			if (getMatch(stacks, stack) == null) {
 				return false;
 			}
 		}
 
 		for (ItemStack stack : stacks) {
-			if (containsStack(contains, stack) == null) {
+			if (getMatch(contains, stack) == null) {
 				return false;
 			}
 		}
@@ -138,15 +138,15 @@ public class StackHelper implements IStackHelper {
 		return true;
 	}
 
-	/* Returns an ItemStack from "stacks" if it isEquivalent to an ItemStack from "contains" */
+	/* Returns an ItemStack from "stacks" if it isEquivalent to an ItemStack from "toMatch" */
 	@Nullable
-	public ItemStack containsStack(@Nullable Iterable<ItemStack> stacks, @Nullable Iterable<ItemStack> contains) {
-		if (stacks == null || contains == null) {
+	public ItemStack getMatch(@Nullable Iterable<ItemStack> stacks, @Nullable Iterable<ItemStack> toMatch) {
+		if (stacks == null || toMatch == null) {
 			return null;
 		}
 
-		for (ItemStack containStack : contains) {
-			ItemStack matchingStack = containsStack(stacks, containStack);
+		for (ItemStack containStack : toMatch) {
+			ItemStack matchingStack = getMatch(stacks, containStack);
 			if (matchingStack != null) {
 				return matchingStack;
 			}
@@ -155,15 +155,15 @@ public class StackHelper implements IStackHelper {
 		return null;
 	}
 
-	/* Returns an ItemStack from "stacks" if it isEquivalent to "contains" */
+	/* Returns an ItemStack from "stacks" if it isEquivalent to "toMatch" */
 	@Nullable
-	public ItemStack containsStack(@Nullable Iterable<ItemStack> stacks, @Nullable ItemStack contains) {
-		if (stacks == null || contains == null) {
+	public ItemStack getMatch(@Nullable Iterable<ItemStack> stacks, @Nullable ItemStack toMatch) {
+		if (stacks == null || toMatch == null) {
 			return null;
 		}
 
 		for (ItemStack stack : stacks) {
-			if (isEquivalent(contains, stack)) {
+			if (isEquivalent(toMatch, stack)) {
 				return stack;
 			}
 		}

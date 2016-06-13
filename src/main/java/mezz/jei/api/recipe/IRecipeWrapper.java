@@ -1,11 +1,10 @@
 package mezz.jei.api.recipe;
 
-import net.minecraft.client.Minecraft;
-import net.minecraftforge.fluids.FluidStack;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+
+import net.minecraft.client.Minecraft;
 
 /**
  * A wrapper around a normal recipe with methods that allow JEI can make sense of it.
@@ -13,23 +12,9 @@ import java.util.List;
  */
 public interface IRecipeWrapper {
 
-	/**
-	 * Return a list of recipe inputs.
-	 * Each element can be an ItemStack, null, or a List of ItemStacks.
-	 */
-	List getInputs();
+	void getInputs(IAllRecipeIngredients inputs);
 
-	/**
-	 * Return a list of recipe inputs.
-	 * Each element can be an ItemStack, null, or a List of ItemStacks.
-	 */
-	List getOutputs();
-
-	/** Return a list of recipe fluid inputs. */
-	List<FluidStack> getFluidInputs();
-
-	/** Return a list of recipe fluid outputs. */
-	List<FluidStack> getFluidOutputs();
+	void getOutputs(IAllRecipeIngredients outputs);
 
 	/**
 	 * Draw additional info about the recipe.

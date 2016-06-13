@@ -5,14 +5,14 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeHandler;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 /**
  * The IRecipeManager offers several functions for retrieving and handling recipes.
- * The IRecipeManager instance is provided in JEIManager.
+ * The IRecipeManager instance is provided in {@link IJeiRuntime#getRecipeRegistry()}.
  * Available to IModPlugins
  */
 public interface IRecipeRegistry {
@@ -25,41 +25,35 @@ public interface IRecipeRegistry {
 	@Nonnull
 	List<IRecipeCategory> getRecipeCategories();
 
+	/**
+	 * Returns an {@link IIngredientType} for the given ingredient if one exists.
+	 * Throws an exception if the ingredientType has not been registered.
+	 */
+	@Nonnull
+	<T> IIngredientType<T> getTypeForIngredient(@Nonnull Class<? extends T> ingredientClass);
+	@Nonnull
+	<T> IIngredientType<T> getTypeForIngredient(@Nonnull T ingredient);
+
+
 	/** Returns an unmodifiable list of Recipe Categories */
 	@Nonnull
 	List<IRecipeCategory> getRecipeCategories(@Nonnull List<String> recipeCategoryUids);
 
-	/** Returns an unmodifiable list of Recipe Categories that have the ItemStack as an input */
+	/** Returns an unmodifiable list of Recipe Categories that have the ingredient as an input */
 	@Nonnull
-	List<IRecipeCategory> getRecipeCategoriesWithInput(@Nonnull ItemStack input);
+	<T> List<IRecipeCategory> getRecipeCategoriesWithInput(@Nonnull T input);
 
-	/** Returns an unmodifiable list of Recipe Categories that have the Fluid as an input */
+	/** Returns an unmodifiable list of Recipe Categories that have the ingredient as an output */
 	@Nonnull
-	List<IRecipeCategory> getRecipeCategoriesWithInput(@Nonnull FluidStack input);
+	<T> List<IRecipeCategory> getRecipeCategoriesWithOutput(@Nonnull T output);
 
-	/** Returns an unmodifiable list of Recipe Categories that have the ItemStack as an output */
+	/** Returns an unmodifiable list of Recipes of recipeCategory that have the ingredient as an input */
 	@Nonnull
-	List<IRecipeCategory> getRecipeCategoriesWithOutput(@Nonnull ItemStack output);
+	<T> List<Object> getRecipesWithInput(@Nonnull IRecipeCategory recipeCategory, @Nonnull T input);
 
-	/** Returns an unmodifiable list of Recipe Categories that have the Fluid as an output */
+	/** Returns an unmodifiable list of Recipes of recipeCategory that have the ingredient as an output */
 	@Nonnull
-	List<IRecipeCategory> getRecipeCategoriesWithOutput(@Nonnull FluidStack output);
-
-	/** Returns an unmodifiable list of Recipes of recipeCategory that have the ItemStack as an input */
-	@Nonnull
-	List<Object> getRecipesWithInput(@Nonnull IRecipeCategory recipeCategory, @Nonnull ItemStack input);
-
-	/** Returns an unmodifiable list of Recipes of recipeCategory that have the Fluid as an input */
-	@Nonnull
-	List<Object> getRecipesWithInput(@Nonnull IRecipeCategory recipeCategory, @Nonnull FluidStack input);
-
-	/** Returns an unmodifiable list of Recipes of recipeCategory that have the ItemStack as an output */
-	@Nonnull
-	List<Object> getRecipesWithOutput(@Nonnull IRecipeCategory recipeCategory, @Nonnull ItemStack output);
-
-	/** Returns an unmodifiable list of Recipes of recipeCategory that have the Fluid as an output */
-	@Nonnull
-	List<Object> getRecipesWithOutput(@Nonnull IRecipeCategory recipeCategory, @Nonnull FluidStack output);
+	<T> List<Object> getRecipesWithOutput(@Nonnull IRecipeCategory recipeCategory, @Nonnull T output);
 
 	/** Returns an unmodifiable list of Recipes in recipeCategory */
 	@Nonnull

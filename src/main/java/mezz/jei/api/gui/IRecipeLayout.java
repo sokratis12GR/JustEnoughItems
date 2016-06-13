@@ -4,18 +4,11 @@ import javax.annotation.Nonnull;
 
 public interface IRecipeLayout {
 	/**
-	 * Contains all the itemStacks displayed on this recipe layout.
-	 * Init and set them in your recipe category.
+	 * Contains all the ingredients of the specified type displayed on this recipe layout.
+	 * Init them in your recipe category.
 	 */
 	@Nonnull
-	IGuiItemStackGroup getItemStacks();
-
-	/**
-	 * Contains all the fluidStacks displayed on this recipe layout.
-	 * Init and set them in your recipe category.
-	 */
-	@Nonnull
-	IGuiFluidStackGroup getFluidStacks();
+	<T> IGuiIngredientGroup<T> getIngredientGroup(Class<T> ingredientType);
 
 	/**
 	 * Moves the recipe transfer button's position relative to the recipe layout.

@@ -1,36 +1,20 @@
 package mezz.jei.api.recipe;
 
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 
 public abstract class BlankRecipeWrapper implements IRecipeWrapper {
 	@Override
-	@Nonnull
-	public List getInputs() {
-		return Collections.emptyList();
+	public void getInputs(IAllRecipeIngredients inputs) {
+
 	}
 
 	@Override
-	@Nonnull
-	public List getOutputs() {
-		return Collections.emptyList();
-	}
+	public void getOutputs(IAllRecipeIngredients outputs) {
 
-	@Override
-	@Nonnull
-	public List<FluidStack> getFluidInputs() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	@Nonnull
-	public List<FluidStack> getFluidOutputs() {
-		return Collections.emptyList();
 	}
 
 	@Override

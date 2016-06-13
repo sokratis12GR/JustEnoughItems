@@ -1,6 +1,14 @@
 package mezz.jei.plugins.vanilla.brewing;
 
+import javax.annotation.Nonnull;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import com.google.common.base.Objects;
+import mezz.jei.api.recipe.IAllRecipeIngredients;
+import mezz.jei.api.recipe.IRecipeIngredients;
 import mezz.jei.plugins.vanilla.VanillaRecipeWrapper;
 import mezz.jei.util.Translator;
 import net.minecraft.client.Minecraft;
@@ -8,17 +16,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.potion.PotionType;
 import net.minecraft.potion.PotionUtils;
 
-import javax.annotation.Nonnull;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 public class BrewingRecipeWrapper extends VanillaRecipeWrapper {
 	private final List<ItemStack> ingredients;
 	private final ItemStack potionInput;
 	private final ItemStack potionOutput;
-	private final List<Object> inputs;
 	private final int brewingSteps;
 	private final int hashCode;
 
@@ -32,12 +33,6 @@ public class BrewingRecipeWrapper extends VanillaRecipeWrapper {
 		this.potionOutput = potionOutput;
 		this.brewingSteps = brewingSteps;
 
-		this.inputs = new ArrayList<>();
-		this.inputs.add(potionInput);
-		this.inputs.add(potionInput);
-		this.inputs.add(potionInput);
-		this.inputs.add(ingredients);
-
 		ItemStack firstIngredient = ingredients.get(0);
 
 		PotionType typeIn = PotionUtils.getPotionFromItem(potionInput);
@@ -47,16 +42,19 @@ public class BrewingRecipeWrapper extends VanillaRecipeWrapper {
 				firstIngredient.getItem(), firstIngredient.getMetadata());
 	}
 
-	@Nonnull
 	@Override
-	public List getInputs() {
-		return inputs;
+	public void getInputs(IAllRecipeIngredients inputs) {
+		IRecipeIngredients<ItemStack> itemStacks = inputs.get(ItemStack.class);
+		itemStacks.setSlot(0, potionInput);
+		itemStacks.setSlot(1, potionInput);
+		itemStacks.setSlot(2, potionInput);
+		itemStacks.setSlot(3, ingredients);
 	}
 
-	@Nonnull
 	@Override
-	public List<ItemStack> getOutputs() {
-		return Collections.singletonList(potionOutput);
+	public void getOutputs(IAllRecipeIngredients outputs) {
+		IRecipeIngredients<ItemStack> itemStacks = outputs.get(ItemStack.class);
+		itemStacks.setSlot(0, potionOutput);
 	}
 
 	@Override

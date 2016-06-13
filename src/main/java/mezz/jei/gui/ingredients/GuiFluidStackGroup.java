@@ -9,7 +9,7 @@ import mezz.jei.api.recipe.IFocus;
 import net.minecraftforge.fluids.FluidStack;
 
 public class GuiFluidStackGroup extends GuiIngredientGroup<FluidStack, GuiIngredient<FluidStack>> implements IGuiFluidStackGroup {
-	private static final FluidStackHelper helper = new FluidStackHelper();
+	private static final FluidStackType type = new FluidStackType();
 
 	public GuiFluidStackGroup(@Nonnull IFocus<FluidStack> focus) {
 		super(focus);
@@ -18,7 +18,7 @@ public class GuiFluidStackGroup extends GuiIngredientGroup<FluidStack, GuiIngred
 	@Override
 	public void init(int slotIndex, boolean input, int xPosition, int yPosition, int width, int height, int capacityMb, boolean showCapacity, @Nullable IDrawable overlay) {
 		FluidStackRenderer renderer = new FluidStackRenderer(capacityMb, showCapacity, width, height, overlay);
-		GuiIngredient<FluidStack> guiIngredient = new GuiIngredient<>(renderer, helper, slotIndex, input, xPosition, yPosition, width, height, 0, itemCycleOffset);
+		GuiIngredient<FluidStack> guiIngredient = new GuiIngredient<>(renderer, type, slotIndex, input, xPosition, yPosition, width, height, 0, itemCycleOffset);
 		guiIngredients.put(slotIndex, guiIngredient);
 	}
 }

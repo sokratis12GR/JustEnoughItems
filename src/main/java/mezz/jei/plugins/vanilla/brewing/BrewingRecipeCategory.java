@@ -4,6 +4,7 @@ import mezz.jei.api.IGuiHelper;
 import mezz.jei.api.gui.IDrawable;
 import mezz.jei.api.gui.IDrawableAnimated;
 import mezz.jei.api.gui.IDrawableStatic;
+import mezz.jei.api.gui.IGuiIngredientGroup;
 import mezz.jei.api.gui.IGuiItemStackGroup;
 import mezz.jei.api.gui.IRecipeLayout;
 import mezz.jei.api.recipe.IRecipeCategory;
@@ -11,6 +12,7 @@ import mezz.jei.api.recipe.IRecipeWrapper;
 import mezz.jei.api.recipe.VanillaRecipeCategoryUid;
 import mezz.jei.util.Translator;
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 
 import javax.annotation.Nonnull;
@@ -88,7 +90,9 @@ public class BrewingRecipeCategory implements IRecipeCategory<BrewingRecipeWrapp
 
 	@Override
 	public void setRecipe(@Nonnull IRecipeLayout recipeLayout, @Nonnull BrewingRecipeWrapper recipeWrapper) {
-		IGuiItemStackGroup itemStacks = recipeLayout.getItemStacks();
+		IGuiIngredientGroup<ItemStack> itemStacks = recipeLayout.getIngredientGroup(ItemStack.class);
+
+		itemStacks.
 
 		itemStacks.init(brewPotionSlot1, true, 0, 35);
 		itemStacks.init(brewPotionSlot2, true, 23, 42);

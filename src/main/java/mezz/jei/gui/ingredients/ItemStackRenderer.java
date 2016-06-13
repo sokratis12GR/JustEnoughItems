@@ -1,6 +1,7 @@
 package mezz.jei.gui.ingredients;
 
 import mezz.jei.Internal;
+import mezz.jei.api.gui.IIngredientRenderer;
 import mezz.jei.util.Translator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;

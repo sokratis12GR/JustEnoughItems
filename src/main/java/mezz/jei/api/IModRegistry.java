@@ -1,6 +1,8 @@
 package mezz.jei.api;
 
 import mezz.jei.api.gui.IAdvancedGuiHandler;
+import mezz.jei.api.gui.IIngredientRenderer;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferRegistry;
@@ -88,6 +90,11 @@ public interface IModRegistry {
 	void addDescription(ItemStack itemStack, String... descriptionKeys);
 
 	void addDescription(List<ItemStack> itemStacks, String... descriptionKeys);
+
+	/**
+	 * Add a new ingredient type. JEI has built-in ingredient types for ItemStack and FluidStack.
+	 */
+	void addIngredientType(IIngredientType<?> ingredientType);
 
 	/**
 	 * Get the registry for setting up recipe transfer.

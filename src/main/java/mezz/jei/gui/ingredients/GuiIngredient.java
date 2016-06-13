@@ -8,9 +8,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import mezz.jei.api.gui.IIngredientRenderer;
 import mezz.jei.api.gui.IGuiIngredient;
 import mezz.jei.api.gui.ITooltipCallback;
 import mezz.jei.api.recipe.IFocus;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.gui.Focus;
 import mezz.jei.gui.TooltipRenderer;
 import mezz.jei.util.CycleTimer;
@@ -40,15 +42,15 @@ public class GuiIngredient<T> extends Gui implements IGuiIngredient<T> {
 	@Nonnull
 	private final IIngredientRenderer<T> ingredientRenderer;
 	@Nonnull
-	private final IIngredientHelper<T> ingredientHelper;
+	private final IIngredientType<T> ingredientType;
 	@Nullable
 	private ITooltipCallback<T> tooltipCallback;
 
 	private boolean enabled;
 
-	public GuiIngredient(@Nonnull IIngredientRenderer<T> ingredientRenderer, @Nonnull IIngredientHelper<T> ingredientHelper, int slotIndex, boolean input, int xPosition, int yPosition, int width, int height, int padding, int itemCycleOffset) {
+	public GuiIngredient(@Nonnull IIngredientRenderer<T> ingredientRenderer, @Nonnull IIngredientType<T> ingredientType, int slotIndex, boolean input, int xPosition, int yPosition, int width, int height, int padding, int itemCycleOffset) {
 		this.ingredientRenderer = ingredientRenderer;
-		this.ingredientHelper = ingredientHelper;
+		this.ingredientType = ingredientType;
 
 		this.slotIndex = slotIndex;
 		this.input = input;
@@ -77,7 +79,7 @@ public class GuiIngredient<T> extends Gui implements IGuiIngredient<T> {
 		if (ingredient == null) {
 			return null;
 		}
-		return ingredientHelper.createFocus(ingredient);
+		return new Focus<>(ingredient);
 	}
 
 	@Nonnull
@@ -93,10 +95,12 @@ public class GuiIngredient<T> extends Gui implements IGuiIngredient<T> {
 	public void set(@Nonnull Collection<T> ingredients, @Nonnull IFocus<T> focus) {
 		this.displayIngredients.clear();
 		this.allIngredients.clear();
-		ingredients = ingredientHelper.expandSubtypes(ingredients);
+		ingredients = ingredientType.expandSubtypes(ingredients);
 		T match = null;
 		if ((isInput() && focus.getMode() == IFocus.Mode.INPUT) || (!isInput() && focus.getMode() == IFocus.Mode.OUTPUT)) {
-			match = ingredientHelper.getMatch(ingredients, focus);
+			if (focus.getValue() != null) {
+				match = ingredientType.getMatch(ingredients, focus.getValue());
+			}
 		}
 		if (match != null) {
 			this.displayIngredients.add(match);

@@ -7,6 +7,7 @@ import mezz.jei.api.IItemRegistry;
 import mezz.jei.api.IJeiHelpers;
 import mezz.jei.api.IModRegistry;
 import mezz.jei.api.gui.IAdvancedGuiHandler;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
@@ -31,6 +32,7 @@ public class ModRegistry implements IModRegistry {
 	private final List<IRecipeHandler> recipeHandlers = new ArrayList<>();
 	private final List<IAdvancedGuiHandler<?>> advancedGuiHandlers = new ArrayList<>();
 	private final List<Object> recipes = new ArrayList<>();
+	private final List<IIngredientType> ingredientTypes = new ArrayList<>();
 	private final RecipeTransferRegistry recipeTransferRegistry = new RecipeTransferRegistry();
 	private final Multimap<Class<? extends GuiContainer>, RecipeClickableArea> recipeClickableAreas = HashMultimap.create();
 	private final Multimap<String, ItemStack> craftItemsForCategories = HashMultimap.create();
@@ -120,6 +122,11 @@ public class ModRegistry implements IModRegistry {
 	}
 
 	@Override
+	public void addIngredientType(IIngredientType<?> ingredientType) {
+		ingredientTypes.add(ingredientType);
+	}
+
+	@Override
 	public IRecipeTransferRegistry getRecipeTransferRegistry() {
 		return recipeTransferRegistry;
 	}
@@ -132,6 +139,6 @@ public class ModRegistry implements IModRegistry {
 	@Nonnull
 	public RecipeRegistry createRecipeRegistry() {
 		List<IRecipeTransferHandler> recipeTransferHandlers = recipeTransferRegistry.getRecipeTransferHandlers();
-		return new RecipeRegistry(recipeCategories, recipeHandlers, recipeTransferHandlers, recipes, recipeClickableAreas, craftItemsForCategories);
+		return new RecipeRegistry(recipeCategories, recipeHandlers, recipeTransferHandlers, recipes, ingredientTypes, recipeClickableAreas, craftItemsForCategories);
 	}
 }

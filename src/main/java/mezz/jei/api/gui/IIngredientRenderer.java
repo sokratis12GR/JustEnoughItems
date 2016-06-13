@@ -1,4 +1,4 @@
-package mezz.jei.gui.ingredients;
+package mezz.jei.api.gui;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

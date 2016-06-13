@@ -3,6 +3,7 @@ package mezz.jei.plugins.jei.description;
 import mezz.jei.Internal;
 import mezz.jei.api.gui.IDrawable;
 import mezz.jei.api.recipe.BlankRecipeWrapper;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.util.MathUtil;
 import mezz.jei.util.Translator;
 import net.minecraft.client.Minecraft;
@@ -84,13 +85,19 @@ public class ItemDescriptionRecipe extends BlankRecipeWrapper {
 
 	@Nonnull
 	@Override
-	public List<ItemStack> getInputs() {
-		return itemStacks;
+	public <T> List<List<T>> getInputs(IIngredientType<T> ingredientType) {
+		if (ingredientType.getIngredientClass() == ItemStack.class) {
+			return Collections.singletonList(itemStacks);
+		}
 	}
 
-	@Nonnull
 	@Override
-	public List<ItemStack> getOutputs() {
+	public List<List<ItemStack>> getItemInputs() {
+		return Collections.singletonList(itemStacks);
+	}
+
+	@Override
+	public List<ItemStack> getItemOutputs() {
 		return itemStacks;
 	}
 

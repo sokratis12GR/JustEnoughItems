@@ -11,7 +11,7 @@ import net.minecraft.item.ItemStack;
 public class GuiItemStackGroup extends GuiIngredientGroup<ItemStack, GuiIngredient<ItemStack>> implements IGuiItemStackGroup {
 	private static final int baseWidth = 16;
 	private static final int baseHeight = 16;
-	private static final ItemStackHelper helper = new ItemStackHelper();
+	private static final ItemStackType type = new ItemStackType();
 
 	public GuiItemStackGroup(@Nonnull IFocus<ItemStack> focus) {
 		super(focus);
@@ -27,7 +27,7 @@ public class GuiItemStackGroup extends GuiIngredientGroup<ItemStack, GuiIngredie
 
 	private GuiIngredient<ItemStack> createGuiItemStack(int index, boolean input, int xPosition, int yPosition, int padding) {
 		ItemStackRenderer renderer = new ItemStackRenderer();
-		return new GuiIngredient<>(renderer, helper, index, input, xPosition, yPosition, getWidth(padding), getHeight(padding), padding, itemCycleOffset);
+		return new GuiIngredient<>(renderer, type, index, input, xPosition, yPosition, getWidth(padding), getHeight(padding), padding, itemCycleOffset);
 	}
 
 	@Override

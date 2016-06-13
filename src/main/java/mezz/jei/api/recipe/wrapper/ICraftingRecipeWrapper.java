@@ -8,12 +8,4 @@ import java.util.List;
 
 public interface ICraftingRecipeWrapper extends IRecipeWrapper {
 
-	@Nonnull
-	@Override
-	List getInputs();
-
-	@Nonnull
-	@Override
-	List<ItemStack> getOutputs();
-
 }

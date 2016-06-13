@@ -16,9 +16,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import mezz.jei.api.IRecipeRegistry;
+import mezz.jei.api.recipe.IIngredientType;
 import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeHandler;
 import mezz.jei.api.recipe.IRecipeWrapper;
@@ -33,7 +35,6 @@ import mezz.jei.util.StackHelper;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 public class RecipeRegistry implements IRecipeRegistry {
 	private final List<IRecipeHandler> recipeHandlers;
@@ -42,6 +43,7 @@ public class RecipeRegistry implements IRecipeRegistry {
 	private final ImmutableMultimap<IRecipeCategory, ItemStack> craftItemsForCategories;
 	private final ImmutableMultimap<String, String> categoriesForCraftItemKeys;
 	private final ImmutableMap<String, IRecipeCategory> recipeCategoriesMap;
+	private final ImmutableMap<Class, IIngredientType> ingredientTypes;
 	private final ListMultimap<IRecipeCategory, Object> recipesForCategories;
 	private final RecipeMap recipeInputMap;
 	private final RecipeMap recipeOutputMap;
@@ -52,12 +54,14 @@ public class RecipeRegistry implements IRecipeRegistry {
 			@Nonnull List<IRecipeHandler> recipeHandlers,
 			@Nonnull List<IRecipeTransferHandler> recipeTransferHandlers,
 			@Nonnull List<Object> recipes,
+			@Nonnull List<IIngredientType> ingredientTypes,
 			@Nonnull Multimap<Class<? extends GuiContainer>, RecipeClickableArea> recipeClickableAreasMap,
 			@Nonnull Multimap<String, ItemStack> craftItemsForCategories
 	) {
 		this.recipeCategoriesMap = buildRecipeCategoriesMap(recipeCategories);
 		this.recipeTransferHandlers = buildRecipeTransferHandlerTable(recipeTransferHandlers);
 		this.recipeHandlers = buildRecipeHandlersList(recipeHandlers);
+		this.ingredientTypes = buildIngredientTypeMap(ingredientTypes);
 		this.recipeClickableAreasMap = ImmutableMultimap.copyOf(recipeClickableAreasMap);
 
 		RecipeCategoryComparator recipeCategoryComparator = new RecipeCategoryComparator(recipeCategories);
@@ -78,7 +82,8 @@ public class RecipeRegistry implements IRecipeRegistry {
 			Collection<ItemStack> craftItems = craftItemsForCategories.get(recipeCategoryUid);
 			craftItemsForCategoriesBuilder.putAll(recipeCategory, craftItems);
 			for (ItemStack craftItem : craftItems) {
-				recipeInputMap.addRecipeCategory(recipeCategory, craftItem);
+				IIngredientType<ItemStack> ingredientType = getTypeForIngredient(craftItem.getClass());
+				recipeInputMap.addRecipeCategory(recipeCategory, craftItem, ingredientType);
 				String craftItemKey = stackHelper.getUniqueIdentifierForStack(craftItem);
 				categoriesForCraftItemKeysBuilder.put(craftItemKey, recipeCategoryUid);
 			}
@@ -92,6 +97,14 @@ public class RecipeRegistry implements IRecipeRegistry {
 		ImmutableMap.Builder<String, IRecipeCategory> mapBuilder = ImmutableMap.builder();
 		for (IRecipeCategory recipeCategory : recipeCategories) {
 			mapBuilder.put(recipeCategory.getUid(), recipeCategory);
+		}
+		return mapBuilder.build();
+	}
+
+	private static ImmutableMap<Class, IIngredientType> buildIngredientTypeMap(@Nonnull List<IIngredientType> ingredientTypes) {
+		ImmutableMap.Builder<Class, IIngredientType> mapBuilder = ImmutableMap.builder();
+		for (IIngredientType ingredientType : ingredientTypes) {
+			mapBuilder.put(ingredientType.getClass(), ingredientType);
 		}
 		return mapBuilder.build();
 	}
@@ -188,30 +201,27 @@ public class RecipeRegistry implements IRecipeRegistry {
 	}
 
 	private <T> void addRecipeUnchecked(@Nonnull T recipe, IRecipeCategory recipeCategory, IRecipeHandler<T> recipeHandler) {
-		StackHelper stackHelper = Internal.getStackHelper();
 		IRecipeWrapper recipeWrapper = recipeHandler.getRecipeWrapper(recipe);
 
-		List inputs = recipeWrapper.getInputs();
-		List<FluidStack> fluidInputs = recipeWrapper.getFluidInputs();
-		if (inputs != null || fluidInputs != null) {
-			List<ItemStack> inputStacks = stackHelper.toItemStackList(inputs);
-			if (fluidInputs == null) {
-				fluidInputs = Collections.emptyList();
-			}
-			recipeInputMap.addRecipe(recipe, recipeCategory, inputStacks, fluidInputs);
-		}
-
-		List outputs = recipeWrapper.getOutputs();
-		List<FluidStack> fluidOutputs = recipeWrapper.getFluidOutputs();
-		if (outputs != null || fluidOutputs != null) {
-			List<ItemStack> outputStacks = stackHelper.toItemStackList(outputs);
-			if (fluidOutputs == null) {
-				fluidOutputs = Collections.emptyList();
-			}
-			recipeOutputMap.addRecipe(recipe, recipeCategory, outputStacks, fluidOutputs);
+		for (IIngredientType ingredientType : ingredientTypes.values()) {
+			addRecipeUnchecked(recipe, recipeWrapper, recipeCategory, ingredientType);
 		}
 
 		recipesForCategories.put(recipeCategory, recipe);
+	}
+
+	private <T, V> void addRecipeUnchecked(@Nonnull T recipe, IRecipeWrapper recipeWrapper, IRecipeCategory recipeCategory, IIngredientType<V> ingredientType) {
+		List<List<V>> inputs = recipeWrapper.getInputs(ingredientType);
+		if (inputs != null) {
+			Iterable<V> inputsFlat = Iterables.concat(inputs);
+			recipeInputMap.addRecipe(recipe, recipeCategory, inputsFlat, ingredientType);
+		}
+
+		List<List<V>> outputs = recipeWrapper.getOutputs(ingredientType);
+		if (outputs != null) {
+			Iterable<V> outputsFlat = Iterables.concat(outputs);
+			recipeOutputMap.addRecipe(recipe, recipeCategory, outputsFlat, ingredientType);
+		}
 	}
 
 	@Nonnull
@@ -224,6 +234,32 @@ public class RecipeRegistry implements IRecipeRegistry {
 			}
 		}
 		return builder.build();
+	}
+
+	@Nonnull
+	@Override
+	public <T> IIngredientType<T> getTypeForIngredient(@Nullable Class<? extends T> ingredientClass) {
+		if (ingredientClass == null) {
+			throw new NullPointerException("Null ingredientClass");
+		}
+		//noinspection unchecked
+		IIngredientType<T> ingredientType = ingredientTypes.get(ingredientClass);
+		if (ingredientType == null) {
+			throw new NullPointerException("No ingredient type registered for " + ingredientClass);
+		}
+		return ingredientType;
+	}
+
+	@Nonnull
+	@Override
+	public <T> IIngredientType<T> getTypeForIngredient(@Nullable T ingredient) {
+		if (ingredient == null) {
+			throw new NullPointerException("Null ingredient");
+		}
+
+		//noinspection unchecked
+		Class<? extends T> ingredientClass = (Class<? extends T>) ingredient.getClass();
+		return getTypeForIngredient(ingredientClass);
 	}
 
 	@Nonnull
@@ -275,59 +311,47 @@ public class RecipeRegistry implements IRecipeRegistry {
 
 	@Nonnull
 	@Override
-	public ImmutableList<IRecipeCategory> getRecipeCategoriesWithInput(@Nullable ItemStack input) {
+	public <T> ImmutableList<IRecipeCategory> getRecipeCategoriesWithInput(@Nullable T input) {
 		if (input == null) {
-			Log.error("Null ItemStack input", new NullPointerException());
+			Log.error("Null input", new NullPointerException());
 			return ImmutableList.of();
 		}
-		return recipeInputMap.getRecipeCategories(input);
+		IIngredientType<T> ingredientType = getTypeForIngredient(input);
+		return recipeInputMap.getRecipeCategories(input, ingredientType);
 	}
 
 	@Nonnull
 	@Override
-	public ImmutableList<IRecipeCategory> getRecipeCategoriesWithInput(@Nullable FluidStack input) {
-		if (input == null) {
-			Log.error("Null Fluid input", new NullPointerException());
-			return ImmutableList.of();
-		}
-		return recipeInputMap.getRecipeCategories(input);
-	}
-
-	@Nonnull
-	@Override
-	public ImmutableList<IRecipeCategory> getRecipeCategoriesWithOutput(@Nullable ItemStack output) {
+	public <T> ImmutableList<IRecipeCategory> getRecipeCategoriesWithOutput(@Nullable T output) {
 		if (output == null) {
-			Log.error("Null ItemStack output", new NullPointerException());
+			Log.error("Null output", new NullPointerException());
 			return ImmutableList.of();
 		}
-		return recipeOutputMap.getRecipeCategories(output);
+		IIngredientType<T> ingredientType = getTypeForIngredient(output);
+		return recipeOutputMap.getRecipeCategories(output, ingredientType);
 	}
 
 	@Nonnull
 	@Override
-	public ImmutableList<IRecipeCategory> getRecipeCategoriesWithOutput(@Nullable FluidStack output) {
-		if (output == null) {
-			Log.error("Null Fluid output", new NullPointerException());
-			return ImmutableList.of();
-		}
-		return recipeOutputMap.getRecipeCategories(output);
-	}
-
-	@Nonnull
-	@Override
-	public List<Object> getRecipesWithInput(@Nullable IRecipeCategory recipeCategory, @Nullable ItemStack input) {
+	public <T> List<Object> getRecipesWithInput(@Nullable IRecipeCategory recipeCategory, @Nullable T input) {
 		if (recipeCategory == null) {
 			Log.error("Null recipeCategory", new NullPointerException());
 			return ImmutableList.of();
 		} else if (input == null) {
-			Log.error("Null ItemStack input", new NullPointerException());
+			Log.error("Null input", new NullPointerException());
 			return ImmutableList.of();
 		}
 
-		ImmutableList<Object> recipes = recipeInputMap.getRecipes(recipeCategory, input);
+		IIngredientType<T> ingredientType = getTypeForIngredient(input);
+		ImmutableList<Object> recipes = recipeInputMap.getRecipes(recipeCategory, input, ingredientType);
 
 		String recipeCategoryUid = recipeCategory.getUid();
-		for (String inputKey : Internal.getStackHelper().getUniqueIdentifiersWithWildcard(input)) {
+
+		Set<String> inputKeys = new HashSet<>();
+		inputKeys.add(ingredientType.getKey(input));
+		inputKeys.add(ingredientType.getWildcardKey(input));
+
+		for (String inputKey : inputKeys) {
 			if (categoriesForCraftItemKeys.get(inputKey).contains(recipeCategoryUid)) {
 				ImmutableSet<Object> specificRecipes = ImmutableSet.copyOf(recipes);
 				List<Object> recipesForCategory = recipesForCategories.get(recipeCategory);
@@ -346,40 +370,16 @@ public class RecipeRegistry implements IRecipeRegistry {
 
 	@Nonnull
 	@Override
-	public List<Object> getRecipesWithInput(@Nullable IRecipeCategory recipeCategory, @Nullable FluidStack input) {
-		if (recipeCategory == null) {
-			Log.error("Null recipeCategory", new NullPointerException());
-			return ImmutableList.of();
-		} else if (input == null) {
-			Log.error("Null Fluid input", new NullPointerException());
-			return ImmutableList.of();
-		}
-		return recipeInputMap.getRecipes(recipeCategory, input);
-	}
-
-	@Nonnull
-	@Override
-	public ImmutableList<Object> getRecipesWithOutput(@Nullable IRecipeCategory recipeCategory, @Nullable ItemStack output) {
+	public <T> ImmutableList<Object> getRecipesWithOutput(@Nullable IRecipeCategory recipeCategory, @Nullable T output) {
 		if (recipeCategory == null) {
 			Log.error("Null recipeCategory", new NullPointerException());
 			return ImmutableList.of();
 		} else if (output == null) {
-			Log.error("Null ItemStack output", new NullPointerException());
+			Log.error("Null output", new NullPointerException());
 			return ImmutableList.of();
 		}
-		return recipeOutputMap.getRecipes(recipeCategory, output);
-	}
-
-	@Nonnull
-	@Override
-	public List<Object> getRecipesWithOutput(@Nullable IRecipeCategory recipeCategory, @Nullable FluidStack output) {
-		if (recipeCategory == null) {
-			return ImmutableList.of();
-		} else if (output == null) {
-			Log.error("Null Fluid output", new NullPointerException());
-			return ImmutableList.of();
-		}
-		return recipeOutputMap.getRecipes(recipeCategory, output);
+		IIngredientType<T> ingredientType = getTypeForIngredient(output);
+		return recipeOutputMap.getRecipes(recipeCategory, output, ingredientType);
 	}
 
 	@Nonnull

@@ -42,10 +42,11 @@ import net.minecraftforge.fluids.FluidRegistry;
 
 @JEIPlugin
 public class VanillaPlugin extends BlankModPlugin {
+	public static IJeiHelpers jeiHelpers;
 	@Override
 	public void register(@Nonnull IModRegistry registry) {
 		IItemRegistry itemRegistry = registry.getItemRegistry();
-		IJeiHelpers jeiHelpers = registry.getJeiHelpers();
+		jeiHelpers = registry.getJeiHelpers();
 
 		ISubtypeRegistry subtypeRegistry = jeiHelpers.getSubtypeRegistry();
 		subtypeRegistry.useNbtForSubtypes(

@@ -7,6 +7,8 @@ import mezz.jei.api.IModRegistry;
 import mezz.jei.api.JEIPlugin;
 import mezz.jei.api.gui.IAdvancedGuiHandler;
 import mezz.jei.config.Config;
+import mezz.jei.gui.ingredients.FluidStackType;
+import mezz.jei.gui.ingredients.ItemStackType;
 import mezz.jei.plugins.jei.debug.DebugRecipe;
 import mezz.jei.plugins.jei.debug.DebugRecipeCategory;
 import mezz.jei.plugins.jei.debug.DebugRecipeHandler;
@@ -29,6 +31,9 @@ public class JEIInternalPlugin extends BlankModPlugin {
 	public void register(@Nonnull IModRegistry registry) {
 		IJeiHelpers jeiHelpers = registry.getJeiHelpers();
 		IGuiHelper guiHelper = jeiHelpers.getGuiHelper();
+
+		registry.addIngredientType(new ItemStackType());
+		registry.addIngredientType(new FluidStackType());
 
 		registry.addRecipeCategories(
 				new ItemDescriptionRecipeCategory(guiHelper)

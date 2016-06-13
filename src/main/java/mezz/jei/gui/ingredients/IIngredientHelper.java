@@ -7,10 +7,8 @@ import mezz.jei.api.recipe.IFocus;
 import mezz.jei.gui.Focus;
 
 public interface IIngredientHelper<T> {
+
 	Collection<T> expandSubtypes(Collection<T> contained);
 
-	T getMatch(Iterable<T> ingredients, @Nonnull IFocus<T> toMatch);
-
-	@Nonnull
-	Focus<T> createFocus(@Nonnull T ingredient);
+	T getMatch(Iterable<T> ingredients, @Nonnull T toMatch);
 }

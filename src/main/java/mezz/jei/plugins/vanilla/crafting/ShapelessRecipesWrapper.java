@@ -1,12 +1,11 @@
 package mezz.jei.plugins.vanilla.crafting;
 
+import javax.annotation.Nonnull;
+
 import mezz.jei.api.IGuiHelper;
+import mezz.jei.api.recipe.IAllRecipeIngredients;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.ShapelessRecipes;
-
-import javax.annotation.Nonnull;
-import java.util.Collections;
-import java.util.List;
 
 public class ShapelessRecipesWrapper extends AbstractShapelessRecipeWrapper {
 
@@ -16,25 +15,15 @@ public class ShapelessRecipesWrapper extends AbstractShapelessRecipeWrapper {
 	public ShapelessRecipesWrapper(@Nonnull IGuiHelper guiHelper, @Nonnull ShapelessRecipes recipe) {
 		super(guiHelper);
 		this.recipe = recipe;
-		for (Object input : this.recipe.recipeItems) {
-			if (input instanceof ItemStack) {
-				ItemStack itemStack = (ItemStack) input;
-				if (itemStack.stackSize != 1) {
-					itemStack.stackSize = 1;
-				}
-			}
-		}
 	}
 
-	@Nonnull
 	@Override
-	public List<ItemStack> getInputs() {
-		return recipe.recipeItems;
+	public void getInputs(IAllRecipeIngredients inputs) {
+		inputs.get(ItemStack.class).setSlots(recipe.recipeItems);
 	}
 
-	@Nonnull
 	@Override
-	public List<ItemStack> getOutputs() {
-		return Collections.singletonList(recipe.getRecipeOutput());
+	public void getOutputs(IAllRecipeIngredients outputs) {
+		outputs.get(ItemStack.class).setSlot(0, recipe.getRecipeOutput());
 	}
 }

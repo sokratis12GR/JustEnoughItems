@@ -166,7 +166,7 @@ public class MasterFocus {
 		Collection<ItemStack> craftingItems = recipeRegistry.getCraftingItems(recipeCategory);
 		if (itemStack != null && mode == IFocus.Mode.INPUT) {
 			StackHelper stackHelper = Internal.getStackHelper();
-			ItemStack matchingStack = stackHelper.containsStack(craftingItems, itemStack);
+			ItemStack matchingStack = stackHelper.getMatch(craftingItems, itemStack);
 			if (matchingStack != null) {
 				return Collections.singletonList(matchingStack);
 			}

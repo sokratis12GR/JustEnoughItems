@@ -1,5 +1,6 @@
 package mezz.jei.gui.ingredients;
 
+import mezz.jei.api.gui.IIngredientRenderer;
 import mezz.jei.api.gui.IDrawable;
 import mezz.jei.util.Translator;
 import net.minecraft.client.Minecraft;
