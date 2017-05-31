@@ -53,6 +53,7 @@ public class BasicRecipeTransferInfo<C extends Container> implements IRecipeTran
 	public List<Slot> getInventorySlots(C container) {
 		List<Slot> slots = new ArrayList<Slot>();
 		for (int i = inventorySlotStart; i < inventorySlotStart + inventorySlotCount; i++) {
+		if (i < container.inventorySlots.size()) {
 			Slot slot = container.getSlot(i);
 			slots.add(slot);
 		}
